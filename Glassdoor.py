@@ -161,7 +161,6 @@ class GlassdoorScraping:
         return df, data, printHeader, tempProcessed
 
     def start(self):
-        limit = 10
         batchSize = 2 # Batch size
         tempProcessed = 0
         totalProcessed = 0
@@ -179,8 +178,6 @@ class GlassdoorScraping:
             for row in reader:
                 if tempProcessed == batchSize:
                     df, data, printHeader, tempProcessed = self.processBatch(df, data, printHeader, totalProcessed)
-                    if totalProcessed == limit:
-                        break
                 if not isTheHeader:
                     try:
                         # We are now working with a company row inside of the data sheet
@@ -206,10 +203,7 @@ class GlassdoorScraping:
                         exit(-1)
                 else:
                     isTheHeader = False
-            self.processBatch(df, data, printHeader, totalProcessed)
-        temp_df = pd.DataFrame(data, columns=COLUMN_NAMES)
-        df = df.append(temp_df)
-        self.writeToCsv(df)
+            df, data, printHeader, tempProcessed = self.processBatch(df, data, printHeader, totalProcessed)
         self.driver.close() # Close the web driver
 
 scraper = GlassdoorScraping()
