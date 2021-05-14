@@ -8,7 +8,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 
 LEMONADE_DATA = r'C:\Users\jacob\Documents\Sprummer2021\LemonadeStand\webScraping\LemonadeDbPlay.csv'
-COLUMN_NAMES = ['Company Name', 'Ticker', 'Location', 'Location Type', 'Sales', 'SIC', 'URL', 'Phone Number', '', 'Category', 'CompanySize', 'Industry']
+COLUMN_NAMES = ['Company Name', 'Ticker', 'Location', 'Location Type', 'Sales', 'SIC', 'URL', 'Phone Number', '', 'Category', 'GlassdoorCompanySize', 'GlassdoorIndustry']
 OUTPUT_CSV = r'C:\Users\jacob\Documents\Sprummer2021\LemonadeStand\webScraping\output.csv'
 CHROMEDRIVER_LOCATION = '/Users/jacob/chromedriver'
 EMAIL = 'jacoballenwest@gmail.com'
@@ -49,8 +49,8 @@ class GlassdoorScraping:
             # print(e)
             # self.logFile.write("ERROR\n")
 
-    def writeToCsv(self, df):
-        df.to_csv (OUTPUT_CSV, index = False, header=True)
+    def writeToCsv(self, df, includeHeader=False):
+        df.to_csv (OUTPUT_CSV, mode='a', index = False, header=includeHeader)
 
     def clickFirstSignInButton(self):
         nav = self.driver.find_element_by_id('SiteNav').find_element_by_xpath('//nav')
@@ -139,23 +139,48 @@ class GlassdoorScraping:
     def refreshPage(self):
         self.driver.get('https://www.glassdoor.com/index.htm')
 
+    def processBatch(self, df, data, printHeader, totalProcessed):
+        temp_df = pd.DataFrame(data, columns=COLUMN_NAMES)
+        df = df.append(temp_df)
+
+        if printHeader == True:
+            self.writeToCsv(df, True)
+            printHeader = False
+        else:
+            self.writeToCsv(df)
+
+        for i in range(len(df.values)):
+            companyName = df.values[i][0]
+
+            # Row number in output csv
+            rowNumInOutputCSV = totalProcessed - len(df.values) + i + 1
+            self.logFile.write('[' + str(rowNumInOutputCSV) + '] ' + companyName + "\n")
+        data = []  # Empty data
+        df = df[0:0].copy()  # Empty the dataframe, but keep the column information
+        tempProcessed = 0
+        return df, data, printHeader, tempProcessed
+
     def start(self):
         limit = 10
-        processed = 0
+        batchSize = 2 # Batch size
+        tempProcessed = 0
+        totalProcessed = 0
         self.logIntoGlassdoor()
 
         # Open the CSV and read the rows
         with open(LEMONADE_DATA, newline='') as csvfile:
             self.logFile = open(LOG_FILE, "w")
-
             reader = csv.reader(csvfile)
             data = []
             df = pd.DataFrame(columns=COLUMN_NAMES)  # creates master dataframe
             isTheHeader = True
+            printHeader = True
 
             for row in reader:
-                if processed >= limit:
-                    break;
+                if tempProcessed == batchSize:
+                    df, data, printHeader, tempProcessed = self.processBatch(df, data, printHeader, totalProcessed)
+                    if totalProcessed == limit:
+                        break
                 if not isTheHeader:
                     try:
                         # We are now working with a company row inside of the data sheet
@@ -168,19 +193,22 @@ class GlassdoorScraping:
                         row.append(companySize)
                         row.append(industry)
                         data.append(row)
-                        self.logFile.write(companyName + "\n")
-                        processed += 1
+                        tempProcessed += 1
+                        totalProcessed += 1
                     except Exception as e:
                         print(e)
-                        self.logFile.write("ERROR\n")
+                        self.logFile.write("--------------------ERROR START--------------------\n")
+                        self.logFile.write(row + "\n")
+                        self.logFile.write("Error message: " + str(e) + "\n")
+                        self.logFile.write("--------------------ERROR END--------------------\n")
                         self.logFile.close()
+                        self.driver.close() # Close the web driver
                         exit(-1)
                 else:
                     isTheHeader = False
-
+            self.processBatch(df, data, printHeader, totalProcessed)
         temp_df = pd.DataFrame(data, columns=COLUMN_NAMES)
         df = df.append(temp_df)
-
         self.writeToCsv(df)
         self.driver.close() # Close the web driver
 
