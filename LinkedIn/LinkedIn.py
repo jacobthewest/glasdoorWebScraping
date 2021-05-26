@@ -84,7 +84,6 @@ class LINKEDIN_SCRAPING:
 
         allButtons = loginContainer.find_elements_by_xpath('//button')
         for button in allButtons:
-            print(button.text)
             if button.text == "Sign in":
                 button.click()
                 break
@@ -182,9 +181,21 @@ class LINKEDIN_SCRAPING:
     # Also returns a clickable link to get to the company page
     # TODO: pickup here
     def filterSearchResults(self, companyName, location):
+        time.sleep(2)
+        #main = self.driver.find_elements_by_xpath('//div[contains(@class, "artdeco-card") and contains(@class, "mb2")]')
         main = self.driver.find_element_by_id('main')
-        allAs = main.find_elements_by_xpath('//a')
-        for companyLink in allAs:
+        ul = self.driver.find_elements_by_xpath('//ul')
+
+        aLinks = []
+        try:
+            for i in range(len(ul)):
+                allAs = ul[i].find_elements_by_xpath('//span/span/a')
+                if len(allAs) > 0:
+                    aLinks = aLinks + allAs
+        except:
+            pass
+
+        for companyLink in aLinks:
             tempName = companyLink.text
             # Compare names for a match
             print(fuzz.token_set_ratio(tempName, companyName))
