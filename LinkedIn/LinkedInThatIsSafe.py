@@ -22,10 +22,10 @@ NUM_LINKEDIN_ACCOUNTS = 6
 LOG_FILE = "pycharm_log.txt"
 
 START_INDEX_INCLUSIVE = 0
-END_INDEX_EXCLUSIVE = 10
+END_INDEX_EXCLUSIVE = 30
 
 chrome_options = Options()
-chrome_options.add_argument('--headless')
+#chrome_options.add_argument('--headless')
 chrome_options.add_argument('--no-sandbox')
 chrome_options.add_argument('--start-maximized')
 chrome_options.add_argument('--window-size=1920,1080')
@@ -115,7 +115,7 @@ class LINKEDIN_SCRAPING:
         return values
 
     def getAboutInfo(self):
-
+        time.sleep(1)
         # Pull page data
         dataTable = self.driver.find_element_by_xpath('//dl')
         labels = dataTable.find_elements_by_xpath('//dt')
@@ -216,7 +216,8 @@ class LINKEDIN_SCRAPING:
                         locationForSearch = location.lower().replace('(usa)','') # Remove (usa) from text
 
                         self.performGoogleSearch(companyNameForSearch, locationForSearch)
-                        #time.sleep(1) # Wait for the query to go through
+                        randInt = random.randint(2, 30)
+                        time.sleep(randInt) # Wait for the query to go through
 
                         foundAResult = self.selectAResult(companyNameForSearch, locationForSearch)
 
