@@ -7,7 +7,7 @@ import random
 from selenium.webdriver.chrome.options import Options
 from fuzzywuzzy import fuzz
 
-LEMONADE_DATA = r'C:\Users\jacob\Documents\Sprummer2021\LemonadeStand\webScraping\LemonadeDbPlay.csv'
+LEMONADE_DATA = r'C:\Users\jacob\Documents\Sprummer2021\LemonadeStand\webScraping\outputPlay.csv'
 COLUMN_NAMES = ['Company Name', 'Ticker', 'Location', 'Location Type', 'Sales', 'SIC', 'URL', 'Phone Number', '', 'Category',
                 'GlassdoorCompanySize', 'GlassdoorIndustry', 'LinkedInCompanySize', 'LinkedInIndustry', 'LinkedInCompanyPageURL',
                 'PeopleWhoWorkAtTheCompanyURL', 'CompanySpecialties', 'MailingLocations']
@@ -21,10 +21,8 @@ LINKEDIN_PASSWORD_NAME = 'LinkedInPassword'
 NUM_LINKEDIN_ACCOUNTS = 6
 LOG_FILE = "VS_log.txt"
 
-# Search a website: site:linkedin.com aquila merchant services inc missouri(USA)
-
-START_INDEX_INCLUSIVE = 3
-END_INDEX_EXCLUSIVE = 10
+START_INDEX_INCLUSIVE = 0
+END_INDEX_EXCLUSIVE = 3
 
 chrome_options = Options()
 # chrome_options.add_argument('--headless')
@@ -173,7 +171,6 @@ class LINKEDIN_SCRAPING:
         # Formats the title to closer match what a correct search result will appear
         linkedInCompanyNameSearchTitle = companyNameForSearch + " | LinkedIn"
 
-        # i = 0
         for result in resultTitles:
             tempTitle = result.text
 
@@ -185,13 +182,7 @@ class LINKEDIN_SCRAPING:
             if percentMatch > 90:
                 result.click()
                 return True
-                # print("SUCCESS")
-                # print("\tPercent Match: " + str(percentMatch))
-                # print("\tChosen title: " + tempTitle)
-                # print("\tDesired title: " + linkedInCompanyNameSearchTitle)
-                # print("\tPosition: " + str(i))
                 break
-            # i += 1
             return False
 
     def start(self):
@@ -201,7 +192,7 @@ class LINKEDIN_SCRAPING:
         self.goToGoogle()
 
         # Open the CSV and read the rows
-        with open(LEMONADE_DATA, newline='') as csvfile:
+        with open(LEMONADE_DATA, newline='', encoding='utf-8') as csvfile:
             self.logFile = open(LOG_FILE, "w")
             reader = csv.reader(csvfile)
             rows = list(reader)
@@ -237,9 +228,6 @@ class LINKEDIN_SCRAPING:
                             extractedResults = [-1, -1, -1, -1, -1, -1]
                             dictionaryValuesList = extractedResults
 
-                        row.append('Glassdoor data')
-                        row.append('Glassdoor data')
-
                         # Add dictionary values to the row
                         row = row + dictionaryValuesList
                         data.append(row)
@@ -248,42 +236,6 @@ class LINKEDIN_SCRAPING:
 
                         self.goToGoogle()
 
-                        # # Enter company name into the search bar and clear previously entered company name
-                        # self.putCompanyNameIntoSearch(companyName)
-                        #
-                        # self.navigateToCompanySearch()
-                        #
-                        # # Enter company location into the search and clear previous selected locations
-                        # self.filterSearchByLocation(location)
-                        #
-                        # # Search the company
-                        # self.makeSearch()
-                        #
-                        # # Filter search results
-                        # companyExists, linkToCompanyPage = self.filterSearchResults(companyName)
-                        #
-                        # # Handle the company results
-                        # if not companyExists:
-                        #     # Set -1 values for all of the columns we want
-                        #     extractedResults = [-1, -1, -1, -1, -1, -1]
-                        #     dictionaryValuesList = extractedResults # Rename the list for the appending to the csv
-                        #     self.driver.get('https://www.linkedin.com/') # Go to the main page because we want to reset the search parameters
-                        # else:
-                        #     # Click into the company page and extract company data
-                        #     linkToCompanyPage.click() # Enter into the company page
-                        #     #extractedResults = '[LinkedInCompanySize', 'LinkedInIndustry', 'LinkedInCompanyPageURL','PeopleWhoWorkAtTheCompanyURL', 'CompanySpecialties', 'MailingLocations']
-                        #     extractedResults = self.extractCompanyData()
-                        #     dictionaryValuesList = list(extractedResults.values()) # Pull dictionary values into a list
-                        #
-                        # # TODO: Delete me later
-                        # row.append('Glassdoor data')
-                        # row.append('Glassdoor data')
-                        #
-                        # # Add dictionary values to the row
-                        # row = row + dictionaryValuesList
-                        # data.append(row)
-                        # tempProcessed += 1
-                        # self.totalProcessed += 1
                     except Exception as e:
                         print(e)
                         self.driver.close() # Close the web driver
