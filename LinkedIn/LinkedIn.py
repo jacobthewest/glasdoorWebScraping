@@ -21,8 +21,8 @@ LINKEDIN_PASSWORD_NAME = 'LinkedInPassword'
 NUM_LINKEDIN_ACCOUNTS = 6
 LOG_FILE = "VS_log.txt"
 
-START_INDEX_INCLUSIVE = 1
-END_INDEX_EXCLUSIVE = 3
+START_INDEX_INCLUSIVE = 0
+END_INDEX_EXCLUSIVE = 2
 
 chrome_options = Options()
 # chrome_options.add_argument('--headless')
@@ -38,7 +38,7 @@ class LINKEDIN_SCRAPING:
     # Build the member variable that is an array of dictionaries of LinkedIn accounts
     def loadLinkedInAccounts(self):
         tempDic = {}
-        with open(LINKEDIN_ACCOUNTS) as file:
+        with open(LINKEDIN_ACCOUNTS, encoding="utf8") as file:
             done = False
             while not done:
                 line = file.readline().strip()
@@ -74,6 +74,8 @@ class LINKEDIN_SCRAPING:
         linkedInAccount = self.pickRandomLinkedInAccount()
         email = linkedInAccount[EMAIL_NAME]
         password = linkedInAccount[LINKEDIN_PASSWORD_NAME]
+
+        time.sleep(1)
 
         # Enter Login Information
         self.driver.find_element_by_id('session_key').send_keys(email)
@@ -111,16 +113,21 @@ class LINKEDIN_SCRAPING:
         tempProcessed = 0
         return df, data, printHeader, tempProcessed
 
-    def navigateToCompanySearch(self):
-        searchDiv = self.driver.find_element_by_id('global-nav-typeahead') # Find the search bar
+    def enterFirstCompany(self):
+        time.sleep(2)
+        searchDiv = self.driver.find_element_by_id('global-nav-typeahead')  # Find the search bar
         searchDiv.click()
-        searchDiv.find_element_by_xpath('//input').send_keys("Google") # Put Google into the search bar
-        searchDiv.find_element_by_xpath('//input').send_keys(Keys.ENTER) # Run the search
+        searchDiv.find_element_by_xpath('//input').send_keys("Google")  # Put Google into the search bar
+        searchDiv.find_element_by_xpath('//input').send_keys(Keys.ENTER)  # Run the search
+        time.sleep(2)
+
+    def navigateToCompanySearch(self):
         time.sleep(2)
         allButtons = self.driver.find_elements_by_xpath('//button')
         for button in allButtons:
             if button.text == "Companies":
-                button.click() # Click the company filter
+                button.click()  # Click the company filter
+                time.sleep(0.5)
                 break
 
     def putCompanyNameIntoSearch(self, companyName):
@@ -133,6 +140,7 @@ class LINKEDIN_SCRAPING:
         searchInput.click() # Focus on the search input
 
         # Clear the search bar
+        searchInput.send_keys(Keys.END)
         while not searchInput.get_attribute("value") == "":
             searchInput.send_keys(Keys.BACK_SPACE)
 
@@ -140,6 +148,7 @@ class LINKEDIN_SCRAPING:
         searchInput.send_keys(Keys.ENTER) # Click out of the search bar
 
     def filterSearchByLocation(self, companyLocation):
+        time.sleep(1)
         # Click the location filter
         buttonCarousel = self.driver.find_element_by_class_name('peek-carousel__slides')
 
@@ -147,22 +156,30 @@ class LINKEDIN_SCRAPING:
         for button in allButtons:
             if button.text == "Locations":
                 button.click()
+                time.sleep(1)
                 break
 
         # Clear previously selected locations (if any)
-        selectedLocationsList = self.driver.find_elements_by_class_name('search-reusables__collection-values-item')
-        if selectedLocationsList:
-            for selectedItem in selectedLocationsList:
-                input = selectedItem.find_element_by_xpath('//input')
-                if input.is_selected():
-                    input.click() # Clear the selected checkbox
+        # selectedLocationsList = self.driver.find_elements_by_class_name('search-reusables__collection-values-item')
+        # if selectedLocationsList:
+        #     for selectedItem in selectedLocationsList:
+        #         input = selectedItem.find_element_by_xpath('//input')
+        #         if input.is_selected():
+        #             input.click() # Clear the selected checkbox
 
         time.sleep(1)
 
         # Enter location
         input = self.driver.find_element_by_xpath('//input[@aria-label="Add a location"]') # Select location div
         input.click()
+
+        # Format the location
+        state = companyLocation.lower().replace('(usa)', '')  # Remove (usa) from text
+        companyLocation = state + ", United States"
+
         input.send_keys(companyLocation) # Enter the company location
+
+        time.sleep(1)
         locations = self.driver.find_elements_by_xpath('//span')
         for loc in locations:
             if ", United States" in loc.text:
@@ -179,13 +196,10 @@ class LINKEDIN_SCRAPING:
 
     # Returns true if the company name and location are found in the search results.
     # Also returns a clickable link to get to the company page
-    # TODO: pickup here
-    def filterSearchResults(self, companyName, location):
+    def filterSearchResults(self, companyName):
         time.sleep(2)
-        #main = self.driver.find_elements_by_xpath('//div[contains(@class, "artdeco-card") and contains(@class, "mb2")]')
         main = self.driver.find_element_by_id('main')
         ul = self.driver.find_elements_by_xpath('//ul')
-
         aLinks = []
         try:
             for i in range(len(ul)):
@@ -204,17 +218,33 @@ class LINKEDIN_SCRAPING:
         return False, None
 
     def getURLs(self):
+        time.sleep(1)
         companypageURL = self.driver.current_url
-        employeesURL = companypageURL + 'people/'
+
+        # Clean up the url for the employeeURL
+        trimmedURL = companypageURL.replace('about/','')
+        employeesURL = trimmedURL + 'people/'
         return companypageURL, employeesURL
 
     def getMailingLocation(self):
-        locationsList = self.driver.find_element_by_id('ember395').find_element_by_xpath('//ul')
-        primaryLocation = locationsList.find_element_by_xpath('//li[1]')
-        pTag = primaryLocation.find_element_by_xpath('//p')
-        mailingLocation = pTag.text
+        mailingLocation = -1
+        try:
+            h3 = self.driver.find_elements_by_xpath('//h3')
+            correctH3 = None
+            for h in h3:
+                if "Location" in h.text:
+                    correctH3 = h
+                    break
+            Ps = correctH3.find_elements_by_xpath('//p')
+            for p in Ps:
+                if ", US" in p.text:
+                    mailingLocation = p.text
+                    break
+        except:
+            pass
         return mailingLocation
 
+    # Removes a stat that says how many company employees are on LinkedIn
     def cleanAboutValues(self, values):
         delIndex = -1
         for i in range(len(values)):
@@ -227,7 +257,22 @@ class LINKEDIN_SCRAPING:
 
     def getAboutInfo(self):
         # Click the about page
-        self.driver.find_element_by_id('ember2078').click()
+        ul = self.driver.find_elements_by_xpath('//ul')
+        aLinks = []
+        try:
+            for i in range(len(ul)):
+                allAs = ul[i].find_elements_by_xpath('//li/a')
+                if len(allAs) > 0:
+                    aLinks = aLinks + allAs
+        except:
+            pass
+
+        for a in aLinks:
+            if a.text == "About":
+                a.click()
+                break
+
+        time.sleep(1.5)
 
         # Pull about page data
         dataTable = self.driver.find_element_by_xpath('//dl')
@@ -237,10 +282,14 @@ class LINKEDIN_SCRAPING:
         # Clean up the values really quick
         values = self.cleanAboutValues(values)
 
+        industry = -1
+        companySize = -1
+        specialties = -1
+
         for i in range(len(labels)):
             if labels[i].text == 'Industry':
                 industry = values[i].text
-            elif labels[i].text == 'CompanySize':
+            elif labels[i].text == 'Company size':
                 companySize = values[i].text
             elif labels[i].text == 'Specialties':
                 specialties = values[i].text
@@ -274,6 +323,7 @@ class LINKEDIN_SCRAPING:
         tempProcessed = 0
         self.totalProcessed = 0
         self.logIntoLinkedIn()
+        self.enterFirstCompany()
         self.navigateToCompanySearch()
 
         # Open the CSV and read the rows
@@ -299,7 +349,7 @@ class LINKEDIN_SCRAPING:
                         # Enter company name into the search bar and clear previously entered company name
                         self.putCompanyNameIntoSearch(companyName)
 
-                        time.sleep(1)
+                        self.navigateToCompanySearch()
 
                         # Enter company location into the search and clear previous selected locations
                         self.filterSearchByLocation(location)
@@ -308,29 +358,32 @@ class LINKEDIN_SCRAPING:
                         self.makeSearch()
 
                         # Filter search results
-                        companyExists, linkToCompanyPage = self.filterSearchResults(companyName, location)
+                        companyExists, linkToCompanyPage = self.filterSearchResults(companyName)
 
                         # Handle the company results
                         if not companyExists:
                             # Set -1 values for all of the columns we want
                             extractedResults = [-1, -1, -1, -1, -1, -1]
+                            dictionaryValuesList = extractedResults # Rename the list for the appending to the csv
+                            self.driver.get('https://www.linkedin.com/') # Go to the main page because we want to reset the search parameters
                         else:
                             # Click into the company page and extract company data
                             linkToCompanyPage.click() # Enter into the company page
                             #extractedResults = '[LinkedInCompanySize', 'LinkedInIndustry', 'LinkedInCompanyPageURL','PeopleWhoWorkAtTheCompanyURL', 'CompanySpecialties', 'MailingLocations']
                             extractedResults = self.extractCompanyData()
+                            dictionaryValuesList = list(extractedResults.values()) # Pull dictionary values into a list
 
-                        row = row + extractedResults
+                        # TODO: Delete me later
+                        row.append('Glassdoor data')
+                        row.append('Glassdoor data')
+
+                        # Add dictionary values to the row
+                        row = row + dictionaryValuesList
                         data.append(row)
                         tempProcessed += 1
                         self.totalProcessed += 1
                     except Exception as e:
                         print(e)
-                        self.logFile.write("--------------------ERROR START--------------------\n")
-                        self.logFile.write(row + "\n")
-                        self.logFile.write("Error message: " + str(e) + "\n")
-                        self.logFile.write("--------------------ERROR END--------------------\n")
-                        self.logFile.close()
                         self.driver.close() # Close the web driver
                         exit(-1)
                 else:
