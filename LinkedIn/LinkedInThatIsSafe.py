@@ -19,13 +19,13 @@ LOCATION_INDEX = 2
 EMAIL_NAME = 'Email'
 LINKEDIN_PASSWORD_NAME = 'LinkedInPassword'
 NUM_LINKEDIN_ACCOUNTS = 6
-LOG_FILE = "VS_log.txt"
+LOG_FILE = "pycharm_log.txt"
 
 START_INDEX_INCLUSIVE = 0
-END_INDEX_EXCLUSIVE = 3
+END_INDEX_EXCLUSIVE = 10
 
 chrome_options = Options()
-# chrome_options.add_argument('--headless')
+chrome_options.add_argument('--headless')
 chrome_options.add_argument('--no-sandbox')
 chrome_options.add_argument('--start-maximized')
 chrome_options.add_argument('--window-size=1920,1080')
@@ -216,7 +216,7 @@ class LINKEDIN_SCRAPING:
                         locationForSearch = location.lower().replace('(usa)','') # Remove (usa) from text
 
                         self.performGoogleSearch(companyNameForSearch, locationForSearch)
-                        time.sleep(2) # Wait for the query to go through
+                        #time.sleep(1) # Wait for the query to go through
 
                         foundAResult = self.selectAResult(companyNameForSearch, locationForSearch)
 
